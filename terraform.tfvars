@@ -12,7 +12,7 @@ cidrs = {
 }
 localip = "15.206.93.141/32"
 
-domain_name = "cloudguy"
+domain_name = "wp-demo"
 
 db_instance_class = "db.t2.micro"
 dbname            = "wpdemo"
@@ -21,8 +21,8 @@ dbpassword        = "admin#1234"
 
 dev_instance_type = "t2.micro"
 dev_ami           = "ami-00068cd7555f543d5"
-public_key_path   = "/root/.ssh/omkar.pub"
-key_name          = "omkar"
+public_key_path   = "/root/.ssh/demo.pub"
+key_name          = "demo"
 
 elb_healthy_threshold   = "2"
 elb_unhealthy_threshold = "2"
