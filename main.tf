@@ -70,6 +70,17 @@ resource "aws_internet_gateway" "wp_igw" {
   }
 }
 
+#--------NAT Gateway--------------
+#eip
+resource "aws_eip" "wp_eip" {
+vpc      = true
+}
+resource "aws_nat_gateway" "wp_nat"{
+  allocation_id = "${aws_eip.wp_eip.id}"
+  subnet_id = "${aws_subnet.wp_public1.id}"
+  depends_on = ["aws_internet_gateway.wp_igw"]
+}
+
 #------Route tables------------------
 
 resource "aws_route_table" "wp_public_rt" {
@@ -83,14 +94,16 @@ resource "aws_route_table" "wp_public_rt" {
   }
 }
 
-resource "aws_default_route_table" "wp_private_rt" {
-  default_route_table_id = "${aws_vpc.wp_vpc.default_route_table_id}"
-  tags = {
+resource "aws_route_table" "wp_private_rt" {
+ vpc_id = "${aws_vpc.wp_vpc.id}"
+ route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id  = "${aws_nat_gateway.wp_nat.id}"
+ }
+ tags = {
     Name = "wp_private"
-  }
-
+ }
 }
-
 
 #------Subnets----------------------
 
@@ -190,12 +203,12 @@ resource "aws_route_table_association" "wp_public2_association" {
 
 resource "aws_route_table_association" "wp_private1_association" {
   subnet_id      = "${aws_subnet.wp_private1.id}"
-  route_table_id = "${aws_default_route_table.wp_private_rt.id}"
+  route_table_id = "${aws_route_table.wp_private_rt.id}"
 }
 
 resource "aws_route_table_association" "wp_private2_association" {
   subnet_id      = "${aws_subnet.wp_private2.id}"
-  route_table_id = "${aws_default_route_table.wp_private_rt.id}"
+  route_table_id = "${aws_route_table.wp_private_rt.id}"
 }
 
 #------Security-Groups------------------------
@@ -292,7 +305,30 @@ resource "aws_security_group" "wp_rds_sg" {
 }
 
 #------s3bucket------------------------
+
+#vpcendpoint-for-s3
+
+resource "aws_vpc_endpoint" "wp_private_s3_endpoint" {
+  vpc_id       = "${aws_vpc.wp_vpc.id}"
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+
+  route_table_ids = ["${aws_vpc.wp_vpc.main_route_table_id}", "${aws_route_table.wp_public_rt.id}"]
+  policy          = <<POLICY
+  {
+    "Statement": [
+       {
+         "Action": "*",
+         "Effect": "Allow",
+         "Resource": "*",
+         "Principal": "*"
+       }
+     ]
+  } 
+POLICY
+}
+
 #code-s3bucket
+
 resource "random_id" "wp_code_bucket" {
   byte_length = 2
 }
